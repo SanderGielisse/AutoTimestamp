@@ -1,3 +1,5 @@
+# partly from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/
+# see https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/LICENSE for license
 
 import torch
 import torch.nn.functional as F
