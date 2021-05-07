@@ -1,4 +1,4 @@
-# partly from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/
+# partly from https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/
 # see https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/LICENSE for license
 
 import torch
