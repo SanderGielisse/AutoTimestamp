@@ -7,7 +7,6 @@ from collections import OrderedDict
 from torch.cuda.amp import autocast
 from torch.cuda.amp import GradScaler
 from torch.nn import functional as F
-from sample import GeneratedSample
 import params
 import os
 

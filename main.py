@@ -11,7 +11,6 @@ import random
 from models import TimestampRegressionModel
 from visualizer import Visualizer
 from image_dataset import ImageDataset
-from sample import GeneratedSample, Population
 
 
 class ImageDatasetDataLoader():
