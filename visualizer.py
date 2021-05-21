@@ -18,7 +18,7 @@ class Visualizer():
     def __init__(self):
         self.display_id = 1
         self.name = 'training'
-        self.port = 8098
+        self.port = 8096
         self.saved = False
         if self.display_id > 0:  # connect to a visdom server given <display_port> and <display_server>
             import visdom

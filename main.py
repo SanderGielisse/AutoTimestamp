@@ -11,12 +11,12 @@ import random
 from models import TimestampRegressionModel
 from visualizer import Visualizer
 from image_dataset import ImageDataset
-
+import image_dataset as id
 
 class ImageDatasetDataLoader():
 
-    def __init__(self):
-        self.dataset = ImageDataset(params.DATA_DIR, params.PHASE, params.BATCH_SIZE)
+    def __init__(self, dataset):
+        self.dataset = dataset
         print("Initialized dataset %s" % type(self.dataset).__name__)
         self.dataloader = torch.utils.data.DataLoader(self.dataset, batch_size=params.BATCH_SIZE, shuffle=True, num_workers=8)
 
@@ -29,8 +29,12 @@ class ImageDatasetDataLoader():
 
 if __name__ == '__main__':
     total_iters = 0
-    dataset = ImageDatasetDataLoader()
-    dataset_size = len(dataset)    # get the number of images in the dataset.
+    dataset_train, dataset_test = id.build_split()
+    
+    dataset_train = ImageDatasetDataLoader(dataset_train)
+    dataset_test = ImageDatasetDataLoader(dataset_test)
+
+    dataset_size = len(dataset_train)    # get the number of images in the dataset.
     print('The number of training images = %d' % dataset_size)
 
     model = TimestampRegressionModel()
@@ -43,7 +47,21 @@ if __name__ == '__main__':
 
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
         
-        for i, input_real in enumerate(dataset):  # inner loop within one epoch
+
+        correct_quarter = 0
+        correct_std = 0
+        total = 0
+        for i, input_real in enumerate(dataset_test):  # inner loop within one epoch
+            model.set_input(input_real)         # unpack data from dataset and apply preprocessing
+            l_correct_quarter, l_correct_std, l_total = model.test()   # calculate loss functions, get gradients, update network weights
+            correct_quarter += l_correct_quarter
+            correct_std += l_correct_std
+            total += l_total
+        print('QUARTER correct', correct_quarter, 'total', total, 'percentage', (correct_quarter * 1.0 / total))
+        print('STD correct', correct_std, 'total', total, 'percentage', (correct_std * 1.0 / total))
+
+
+        for i, input_real in enumerate(dataset_train):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
             if total_iters % 100 == 0:
                 t_data = iter_start_time - iter_data_time
@@ -52,9 +70,6 @@ if __name__ == '__main__':
             epoch_iter += params.BATCH_SIZE
             model.set_input(input_real)         # unpack data from dataset and apply preprocessing
             model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
-
-            if total_iters % 100 == 0:
-                visualizer.display_current_results(model.get_current_visuals(), epoch, False)
 
             if total_iters % 100 == 0:    # print training losses and save logging information to the disk
                 losses = model.get_current_losses()
@@ -68,9 +83,9 @@ if __name__ == '__main__':
                 # model.save_networks(save_suffix)
 
             iter_data_time = time.time()
-            
+
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
-        model.save_networks('latest')
-        model.save_networks(epoch)
+        # model.save_networks('latest')
+        # model.save_networks(epoch)
 
         print('End of epoch %d / %d \t Time Taken: %d sec' % (epoch, params.EPOCHS, time.time() - epoch_start_time))
