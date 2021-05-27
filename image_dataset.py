@@ -7,59 +7,95 @@ import torch
 import torchvision
 import random
 import torch.utils.data as data
-from PIL import Image
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
 import params
 import math
+import tqdm
+import pickle
 
 ENTRY_NAME = "-Date and Time (Original)"
 
 def build_split():
     image_paths = make_dataset(params.DATA_DIR)
-    time_stamps = []
+    # format /media/ultra_ssd/TUDelft/deeplearningseminar/mirflickr_full/images/0/0.jpg
+
+    pickle_path = "./data.pickle"
+    if os.path.exists(pickle_path):
+        with open(pickle_path, 'rb') as f:
+            pairs = pickle.load(f)
     
-    def load(id):
-        # parse -Date and Time (Original)
-        # 2008:06:21 16:12:37
-        with open(params.EXIF_DIR + 'exif' + str(id) + ".txt", 'r', errors='replace') as f:
-            lines = f.readlines()
-            lines = [x.strip() for x in lines]
-            # print(lines)
-            if ENTRY_NAME not in lines:
-                return None
-            i = lines.index(ENTRY_NAME)
-            l = lines[i + 1]
-            l_split = l.split(" ")
-            if len(l_split) != 2:
-                return None
-            value = l_split[1]
-            if value.strip() == "":
-                return None
-            # print(value)
-            split = value.split(":")
-            if len(split) != 3:
-                return None
-            hour = float(split[0])
-            minute = float(split[1])
-            second = float(split[2])
-            result = hour + (minute / 60.0) + (second / (60.0 * 60.0))
-            return (result / 12.0) * math.pi - math.pi
+    else:
+        time_stamps = []
+        buckets = np.zeros((24,))
+        
+        def load(folder, id):
+            # parse -Date and Time (Original)
+            # 2008:06:21 16:12:37
+            with open(params.EXIF_DIR + folder + "/" + id + ".txt", 'r', errors='replace') as f:
+                lines = f.readlines()
+                lines = [x.strip() for x in lines]
+                # print(lines)
+                if ENTRY_NAME not in lines:
+                    return None
+                i = lines.index(ENTRY_NAME)
+                l = lines[i + 1]
+                l_split = l.split(" ")
+                if len(l_split) != 2:
+                    return None
+                value = l_split[1]
+                if not value.replace(":", "").isdecimal():
+                    return None
+                if value.strip() == "":
+                    return None
+                # print(value)
+                split = value.split(":")
+                if len(split) != 3:
+                    return None
+                # print(value)
+                hour = int(split[0])
+                if hour < 0 or hour > 23:
+                    return None
+                buckets[hour] += 1
+                minute = int(split[1])
+                second = int(split[2])
+                result = hour + (minute / 60.0) + (second / (60.0 * 60.0))
+                return (result / 12.0) * math.pi - math.pi
 
-    for image in image_paths:
-        # extract the name
-        name = image.split("/")[-1]
-        name = name.replace("im", "")
-        name = name.replace(".jpg", "")
-        time = load(name)
-        if time is None:
-            continue
-        time_stamps.append(time)
+        for image in tqdm.tqdm(image_paths):
+            # extract the name
 
-    pairs = list(zip(image_paths, time_stamps))
+            try:
+                Image.open(image).convert('RGB')
+            except:
+                continue
+            
+            split = image.split("/")
+            folder = split[-2]
+            name = split[-1]
+            name = name.replace(".jpg", "")
+            time = load(folder, name)
+            if time is None:
+                continue
+            time_stamps.append(time)
+
+        print('buckets', buckets)
+        buckets /= np.sum(buckets)
+        print('buckets', buckets)
+        pairs = list(zip(image_paths, time_stamps))
+        with open(pickle_path, 'wb') as f:
+            pickle.dump(pairs, f)
+
     random.shuffle(pairs)
+    # pairs = pairs[0:1000] # for quick testing
 
     split_at = int(len(pairs) * params.SPLIT_RATIO)
     train = pairs[:split_at]
     test = pairs[split_at:]
+
+    print('train size', len(train))
+    print('test size', len(test))
 
     return ImageDataset(train), ImageDataset(test)
 
@@ -73,13 +109,20 @@ class ImageDataset(data.Dataset):
         # read an image given a random integer index
         image_path, y = self.data_pairs[index]
         image = Image.open(image_path).convert('RGB')
-        image = image.resize((params.IMAGE_SIZE, params.IMAGE_SIZE))
+        image = image.resize((256, 256))
         if random.choice([True, False]) :
             image = image.transpose(Image.FLIP_LEFT_RIGHT)
 
         tr = transforms.Compose([transforms.ToTensor()])
         image = tr(image)
         image = image * 2.0 - 1.0
+
+        # random 224x224 center crop
+        max_offset = 256 - params.IMAGE_SIZE
+        x_off = random.randrange(max_offset)
+        y_off = random.randrange(max_offset)
+        image = image[:, x_off:x_off+params.IMAGE_SIZE, y_off:y_off+params.IMAGE_SIZE] # C,H,W
+        # print('size', image.shape)
 
         res = torch.zeros((1,))
         res[0] = y

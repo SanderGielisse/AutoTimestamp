@@ -60,6 +60,10 @@ if __name__ == '__main__':
         print('QUARTER correct', correct_quarter, 'total', total, 'percentage', (correct_quarter * 1.0 / total))
         print('STD correct', correct_std, 'total', total, 'percentage', (correct_std * 1.0 / total))
 
+        def get_lr(optimizer):
+            for param_group in optimizer.param_groups:
+                return param_group['lr']
+        print('=== Running Epoch with lr', get_lr(model.optimizer_R), ' ===')
 
         for i, input_real in enumerate(dataset_train):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
@@ -83,6 +87,8 @@ if __name__ == '__main__':
                 # model.save_networks(save_suffix)
 
             iter_data_time = time.time()
+        model.scheduler.step() # update learning rate
+        print("Updating learning rate...")
 
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
         # model.save_networks('latest')

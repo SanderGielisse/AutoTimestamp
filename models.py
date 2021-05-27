@@ -8,6 +8,7 @@ from collections import OrderedDict
 from torch.cuda.amp import autocast
 from torch.cuda.amp import GradScaler
 from torch.nn import functional as F
+from torch.optim.lr_scheduler import StepLR
 import params
 import os
 import resnet as rn
@@ -28,11 +29,12 @@ class TimestampRegressionModel():
 
         self.model_names = ['R']
 
-        self.netR = rn.resnet18(pretrained=False, num_classes=2).to(self.device)
-        sah_summary(self.netR, (3, 256, 256))
+        self.netR = rn.resnet50(pretrained=False, num_classes=2).to(self.device)
+        sah_summary(self.netR, (3, 224, 224))
 
-        self.loss_function = vm.compute_loss
-        self.optimizer_R = torch.optim.Adam(self.netR.parameters(), lr=params.LR)
+        self.loss_function = vm.compute_loss_regression # vm.compute_loss
+        self.optimizer_R = torch.optim.SGD(self.netR.parameters(), lr=params.LR, momentum=0.9, weight_decay=0.0001)
+        self.scheduler = StepLR(self.optimizer_R, step_size=1, gamma=0.1)
 
         self.optimizers = [self.optimizer_R]
         self.scaler = GradScaler() # for mixed precision training; faster
@@ -97,7 +99,7 @@ class TimestampRegressionModel():
                 distance = (math.pi * 2) - phi if phi > math.pi else phi
 
                 cor_quarter = distance < (math.pi / 4)
-
+                
                 vml = VonMises(m, k)
                 std = vml.variance.sqrt()
                 cor_std = distance < std
@@ -126,7 +128,7 @@ class TimestampRegressionModel():
 
             mus = vm.compute_mu_angle(mus_x, mus_y)
             ks = torch.ones(mus.shape, device=params.DEVICE)
-            loss_von_mises = self.loss_function(mus, ks, self.ys[:, 0])
+            loss_von_mises = self.loss_function(mus, self.ys[:, 0]) # as middle one ks, 
             loss_k = (1.0 / torch.square(ks)).mean() * 0
             loss = loss_von_mises + loss_k
 
