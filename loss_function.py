@@ -17,6 +17,13 @@ def compute_loss_regression(mus, ys):
         distance += (math.pi * 2) - phi if phi > math.pi else phi
     return distance / mus.shape[0]
 
+def compute_loss_regression2(mus, ys):
+    mu_x = torch.cos(mus)
+    mu_y = torch.sin(mus)
+    y_x = torch.cos(ys)
+    y_y = torch.sin(ys)
+    return torch.mean(torch.square(torch.acos(mu_x * y_x + mu_y * y_y)))
+
 # Compute the angle in radians between (mu_x, mu_y) and (0, 1)
 def compute_mu_angle(mu_x, mu_y):
     # atan2 takes y-coord as first parameter and x-coord as second parameter
