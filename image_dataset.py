@@ -61,7 +61,7 @@ def build_split():
                 minute = int(split[1])
                 second = int(split[2])
                 result = hour + (minute / 60.0) + (second / (60.0 * 60.0))
-                return (result / 12.0) * math.pi - math.pi
+                return (result / 12.0) * math.pi - math.pi # [-pi, pi]
 
         for image in tqdm.tqdm(image_paths):
             # extract the name

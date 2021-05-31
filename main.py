@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
         
-
+        """
         correct_quarter = 0
         correct_std = 0
         total = 0
@@ -59,6 +59,7 @@ if __name__ == '__main__':
             total += l_total
         print('QUARTER correct', correct_quarter, 'total', total, 'percentage', (correct_quarter * 1.0 / total))
         print('STD correct', correct_std, 'total', total, 'percentage', (correct_std * 1.0 / total))
+        """
 
         def get_lr(optimizer):
             for param_group in optimizer.param_groups:
@@ -67,7 +68,7 @@ if __name__ == '__main__':
 
         for i, input_real in enumerate(dataset_train):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
-            if total_iters % 100 == 0:
+            if total_iters % 1 == 0:
                 t_data = iter_start_time - iter_data_time
 
             total_iters += params.BATCH_SIZE
@@ -75,7 +76,7 @@ if __name__ == '__main__':
             model.set_input(input_real)         # unpack data from dataset and apply preprocessing
             model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
 
-            if total_iters % 100 == 0:    # print training losses and save logging information to the disk
+            if total_iters % 1 == 0:    # print training losses and save logging information to the disk
                 losses = model.get_current_losses()
                 t_comp = (time.time() - iter_start_time) / params.BATCH_SIZE
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
