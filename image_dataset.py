@@ -7,8 +7,8 @@ import torch
 import torchvision
 import random
 import torch.utils.data as data
-from PIL import Image, ImageFile
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+from PIL import Image #, ImageFile
+# ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 import params
 import math
@@ -18,18 +18,15 @@ import pickle
 ENTRY_NAME = "-Date and Time (Original)"
 
 def build_split():
-    image_paths = make_dataset(params.DATA_DIR)
+    image_paths_all = make_dataset(params.DATA_DIR)
     # format /media/ultra_ssd/TUDelft/deeplearningseminar/mirflickr_full/images/0/0.jpg
 
-    pickle_path = "./data.pickle"
+
+    pickle_path = "./data_times.pickle"
     if os.path.exists(pickle_path):
         with open(pickle_path, 'rb') as f:
             pairs = pickle.load(f)
-    
     else:
-        time_stamps = []
-        buckets = np.zeros((24,))
-        
         def load(folder, id):
             # parse -Date and Time (Original)
             # 2008:06:21 16:12:37
@@ -59,18 +56,29 @@ def build_split():
                     return None
                 buckets[hour] += 1
                 minute = int(split[1])
+                if minute < 0 or minute > 59:
+                    return None
                 second = int(split[2])
+                if second < 0 or second > 59:
+                    return None
                 result = hour + (minute / 60.0) + (second / (60.0 * 60.0))
-                return (result / 12.0) * math.pi - math.pi # [-pi, pi]
+                res = (result / 24.0) * 2 * math.pi # [0, 2pi]
+                if res < 0 or res > 2 * math.pi:
+                    raise Exception('res out of bounds ', res)
+                return res
 
-        for image in tqdm.tqdm(image_paths):
+        time_stamps = []
+        image_paths = []
+        buckets = np.zeros((24,))
+        
+        for image in tqdm.tqdm(image_paths_all):
             # extract the name
-
             try:
                 Image.open(image).convert('RGB')
             except:
+                print("SKIPPING ", image)
                 continue
-            
+
             split = image.split("/")
             folder = split[-2]
             name = split[-1]
@@ -78,7 +86,14 @@ def build_split():
             time = load(folder, name)
             if time is None:
                 continue
+
+            if time < 0 or time > 2 * math.pi:
+                raise Exception('time out of bounds ', res)
+            image_paths.append(image)
             time_stamps.append(time)
+
+        if len(image_paths) != len(time_stamps):
+            raise Exception('lengths not matching')
 
         print('buckets', buckets)
         buckets /= np.sum(buckets)
@@ -126,6 +141,9 @@ class ImageDataset(data.Dataset):
 
         res = torch.zeros((1,))
         res[0] = y
+        
+        if y < 0 or y > 2 * math.pi:
+            raise Exception('y out of bounds ', res)
 
         return {'image': image, 'y': res}
 
