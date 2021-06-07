@@ -12,6 +12,6 @@ PHASE = 'train'
 IMAGE_SIZE = 224
 BATCH_SIZE = 64
 EPOCHS = 10 # TODO idk how large dataset is exactly?
-LR = 1e-5 # TODO experimentally find good value
+LR = 1e-4 # TODO experimentally find good value
 USE_AUTOCAST = True
 SPLIT_RATIO = 0.99 # N% for training

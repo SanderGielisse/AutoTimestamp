@@ -21,12 +21,14 @@ def build_split():
     image_paths_all = make_dataset(params.DATA_DIR)
     # format /media/ultra_ssd/TUDelft/deeplearningseminar/mirflickr_full/images/0/0.jpg
 
+    # load the valid paths from data_times.pickle
+    with open('./data_times.pickle', 'rb') as f:
+        valid_pairs = pickle.load(f)
+    valid_paths = []
+    for path, _ in valid_pairs:
+        valid_paths.append(path)
 
-    pickle_path = "./data_times.pickle"
-    if os.path.exists(pickle_path):
-        with open(pickle_path, 'rb') as f:
-            pairs = pickle.load(f)
-    else:
+    def to_pairs(selected_paths):
         def load(folder, id):
             # parse -Date and Time (Original)
             # 2008:06:21 16:12:37
@@ -54,7 +56,6 @@ def build_split():
                 hour = int(split[0])
                 if hour < 0 or hour > 23:
                     return None
-                buckets[hour] += 1
                 minute = int(split[1])
                 if minute < 0 or minute > 59:
                     return None
@@ -65,52 +66,68 @@ def build_split():
                 res = (result / 24.0) * 2 * math.pi # [0, 2pi]
                 if res < 0 or res > 2 * math.pi:
                     raise Exception('res out of bounds ', res)
-                return res
+                return res, hour
 
-        time_stamps = []
-        image_paths = []
-        buckets = np.zeros((24,))
+        # time_stamps = []
+        # image_paths = []
+        buckets = {}
         
-        for image in tqdm.tqdm(image_paths_all):
+        for image in tqdm.tqdm(selected_paths): # or all with the check below
             # extract the name
+            """
             try:
                 Image.open(image).convert('RGB')
             except:
                 print("SKIPPING ", image)
                 continue
+            """
 
             split = image.split("/")
             folder = split[-2]
             name = split[-1]
             name = name.replace(".jpg", "")
-            time = load(folder, name)
-            if time is None:
+            full_time, hour = load(folder, name)
+            if full_time is None:
                 continue
 
-            if time < 0 or time > 2 * math.pi:
+            if full_time < 0 or full_time > 2 * math.pi:
                 raise Exception('time out of bounds ', res)
-            image_paths.append(image)
-            time_stamps.append(time)
+            pair = (image, full_time)
 
-        if len(image_paths) != len(time_stamps):
-            raise Exception('lengths not matching')
+            if hour not in buckets:
+                buckets[hour] = []
+            buckets[hour].append(pair)
 
-        print('buckets', buckets)
-        buckets /= np.sum(buckets)
-        print('buckets', buckets)
-        pairs = list(zip(image_paths, time_stamps))
-        with open(pickle_path, 'wb') as f:
-            pickle.dump(pairs, f)
+        # now convert to evenly sized buckets via oversampling
+        largest = 0
+        for lis in buckets.values():
+            l = len(lis)
+            if l > largest:
+                largest = l
+        print('oversampling all buckets to size', largest)
 
-    random.shuffle(pairs)
+        pairs = []
+        for lis in buckets.values():
+            for _ in range(largest):
+                pairs += [random.choice(lis)]
+            print('pairs size now', len(pairs))
+        return pairs
+
+    random.shuffle(valid_paths)
     # pairs = pairs[0:1000] # for quick testing
 
-    split_at = int(len(pairs) * params.SPLIT_RATIO)
-    train = pairs[:split_at]
-    test = pairs[split_at:]
+    split_at = int(len(valid_paths) * params.SPLIT_RATIO)
+    train = valid_paths[:split_at]
+    test = valid_paths[split_at:]
 
-    print('train size', len(train))
-    print('test size', len(test))
+    print('train size before', len(train))
+    print('test size before', len(test))
+
+    train = to_pairs(train)
+    test = to_pairs(test)
+
+    print('train size after', len(train))
+    print('test size after', len(test))
 
     return ImageDataset(train), ImageDataset(test)
 
