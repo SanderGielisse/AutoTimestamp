@@ -41,9 +41,14 @@ def compute_loss_regression(mu_x, mu_y, ys):
 
         # between 0 and 2pi
         if phi <= math.pi:
-            distance += phi
+            diff = phi
         else: # if phi > math.pi
-            distance += ((2 * math.pi) - phi)
+            diff = ((2 * math.pi) - phi)
+
+        if (diff < 0).any() or (diff > math.pi).any():
+            raise Exception("diff out of bounds ", phis)
+        
+        distance += diff
 
     return distance / mus.shape[0]
     # """
