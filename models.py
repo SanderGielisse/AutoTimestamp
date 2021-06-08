@@ -28,29 +28,30 @@ class TimestampRegressionModel():
 
         self.model_names = ['R']
 
-        resnet = torchvision.models.resnext50_32x4d(pretrained=True)
-        resnet = torch.nn.Sequential(*(list(resnet.children())[:-1]))
+        resnet = torchvision.models.resnext50_32x4d(pretrained=False, num_classes=2)
+        # resnet = torch.nn.Sequential(*(list(resnet.children())[:-1]))
 
-        layers = []
-        layers += [resnet, nn.Flatten()]
-        layers += [nn.Linear(2048, 2)]
-        resnet = nn.Sequential(*layers)
+        #layers = []
+        #layers += [resnet, nn.Flatten()]
+        #layers += [nn.Linear(2048, 2)]
+        #resnet = nn.Sequential(*layers)
 
         self.netR = resnet.to(self.device)
         sah_summary(self.netR, (3, 224, 224))
 
         self.loss_function = vm.compute_loss_regression # vm.compute_loss
-        self.optimizer_R = torch.optim.Adam(self.netR.parameters(), lr=params.LR) #, momentum=0.9, weight_decay=0.0001) # 
-        # self.scheduler = StepLR(self.optimizer_R, step_size=3, gamma=0.1, verbose=True) # does nothing
+        self.optimizer_R = torch.optim.SGD(self.netR.parameters(), lr=params.LR, momentum=0.9, weight_decay=0.0001) # 
+        self.scheduler = StepLR(self.optimizer_R, step_size=1, gamma=0.1, verbose=True) # does nothing
         self.val_loss = None
 
         self.optimizers = [self.optimizer_R]
         self.scaler = GradScaler() # for mixed precision training; faster
 
-        self.tanh = nn.Tanh()
+        # self.tanh = nn.Tanh()
         # self.hardtanh = nn.Hardtanh(min_val=-1.0, max_val=1.0)
         # self.sigmoid = nn.Sigmoid()
         # self.elu = nn.ELU()
+        self.tanh = nn.Hardtanh(min_val = -1.0 - 1e-6, max_val = 1.0 + 1e-6)
 
     def set_input(self, input_real):
         # 'image': image, 'y'

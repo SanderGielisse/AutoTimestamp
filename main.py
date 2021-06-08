@@ -66,7 +66,7 @@ if __name__ == '__main__':
             if total_iters % 512 == 0:
                 t_data = iter_start_time - iter_data_time
 
-            if total_iters % 8192 == 0:
+            if total_iters % (1024 * 64) == 0:
                 validate()
 
             total_iters += params.BATCH_SIZE
@@ -87,7 +87,7 @@ if __name__ == '__main__':
                 # model.save_networks(save_suffix)
 
             iter_data_time = time.time()
-        # model.scheduler.step() # update learning rate
+        model.scheduler.step() # update learning rate
         print("Updating learning rate...")
 
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
