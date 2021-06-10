@@ -4,6 +4,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from tqdm import tqdm
 
 import params
 import time
@@ -47,18 +48,13 @@ if __name__ == '__main__':
 
         epoch_iter = 0                  # the number of training iterations in current epoch, reset to 0 every epoch
         
-
-        correct_quarter = 0
-        correct_std = 0
-        total = 0
-        for i, input_real in enumerate(dataset_test):  # inner loop within one epoch
-            model.set_input(input_real)         # unpack data from dataset and apply preprocessing
-            l_correct_quarter, l_correct_std, l_total = model.test()   # calculate loss functions, get gradients, update network weights
-            correct_quarter += l_correct_quarter
-            correct_std += l_correct_std
-            total += l_total
-        print('QUARTER correct', correct_quarter, 'total', total, 'percentage', (correct_quarter * 1.0 / total))
-        print('STD correct', correct_std, 'total', total, 'percentage', (correct_std * 1.0 / total))
+        def validate():
+            losses = []
+            for i, input_real in tqdm(enumerate(dataset_test)):
+                model.set_input(input_real)
+                test_loss = float(model.test())
+                losses += [test_loss]
+            model.val_loss = sum(losses) / len(losses)
 
         def get_lr(optimizer):
             for param_group in optimizer.param_groups:
@@ -67,19 +63,23 @@ if __name__ == '__main__':
 
         for i, input_real in enumerate(dataset_train):  # inner loop within one epoch
             iter_start_time = time.time()  # timer for computation per iteration
-            if total_iters % 100 == 0:
+            if total_iters % 512 == 0:
                 t_data = iter_start_time - iter_data_time
+
+            if total_iters % (1024 * 64) == 0:
+                validate()
 
             total_iters += params.BATCH_SIZE
             epoch_iter += params.BATCH_SIZE
             model.set_input(input_real)         # unpack data from dataset and apply preprocessing
             model.optimize_parameters()   # calculate loss functions, get gradients, update network weights
 
-            if total_iters % 100 == 0:    # print training losses and save logging information to the disk
+            if total_iters % 512 == 0:    # print training losses and save logging information to the disk
                 losses = model.get_current_losses()
                 t_comp = (time.time() - iter_start_time) / params.BATCH_SIZE
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
                 visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, losses)
+                # validation
 
             if total_iters % 20000 == 0:   # cache our latest model every <save_latest_freq> iterations
                 print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
