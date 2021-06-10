@@ -9,8 +9,8 @@ import requests
 
 def crawl():
     flickr=flickrapi.FlickrAPI('c6a2c45591d4973ff525042472446ca2', '202ffe6f387ce29b', cache=True)
-    # keywords = ['outside', 'morning', 'afternoon', 'evening', 'night', 'city', 'raining', 'winter', 'summer', 'autumn', 'fall', 'building', 'farm', 'street']
-    keywords = ['farm']
+    keywords = ['outside', 'morning', 'afternoon', 'evening', 'night', 'city', 'raining', 'winter', 'summer', 'autumn', 'fall', 'building', 'farm']
+    # keywords = ['farm']
 
     tag_mode = 'any'
 
