@@ -6,17 +6,18 @@ import urllib
 from scipy import misc
 from xml.etree import ElementTree
 import requests
+import multiprocessing
 
-def crawl():
+def crawl(keyword):
     flickr=flickrapi.FlickrAPI('c6a2c45591d4973ff525042472446ca2', '202ffe6f387ce29b', cache=True)
-    keywords = ['outside', 'morning', 'afternoon', 'evening', 'night', 'city', 'raining', 'winter', 'summer', 'autumn', 'fall', 'building', 'farm']
+    #keywords = ['outside', 'morning', 'afternoon', 'evening', 'night', 'city', 'raining', 'winter', 'summer', 'autumn', 'fall', 'building', 'farm']
     # keywords = ['farm']
 
-    tag_mode = 'any'
+    tag_mode = 'all'
 
-    photos = flickr.walk(text=keywords,
+    photos = flickr.walk(text=keyword,
                          tag_mode=tag_mode,
-                         tags=keywords,
+                         tags=keyword,
                          extras='url_c',
                          per_page=100,           # may be you can try different numbers..
                          sort='relevance')
@@ -43,10 +44,19 @@ def crawl():
                         f.write(dt)
                     n+=1
                     if n%20 == 0:
-                        print(str(n) + ' images in total')
+                        print(str(keyword) + ': ' + str(n) + ' images in total')
             else:
                 print('no url found')
         except flickrapi.FlickrError:
             print('caught error')
+
 if __name__ == '__main__':
-    crawl()
+    jobs = []
+    # keywords = ['outside', 'morning', 'afternoon', 'evening', 'night', 'city', 'raining', 'winter', 'summer', 'autumn', 'fall', 'building', 'farm', 'street']
+    # keywords = ['beach', 'castle', 'valley', 'mountain', 'wildlife', 'creek', 'lake', 'forest', 'river']
+    # keywords = ['skyline', 'desert', 'harbour', 'village', 'hill']
+    keywords = ['airport', 'park']
+    for i in keywords:
+        p = multiprocessing.Process(target=crawl, args=(i,))
+        jobs.append(p)
+        p.start()
