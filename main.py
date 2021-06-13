@@ -52,9 +52,10 @@ if __name__ == '__main__':
             losses = []
             for i, input_real in tqdm(enumerate(dataset_test)):
                 model.set_input(input_real)
-                test_loss = float(model.test())
+                test_loss = float(model.test(save=(i == 0)))
                 losses += [test_loss]
             model.val_loss = sum(losses) / len(losses)
+        validate()
 
         def get_lr(optimizer):
             for param_group in optimizer.param_groups:
@@ -66,8 +67,8 @@ if __name__ == '__main__':
             if total_iters % 512 == 0:
                 t_data = iter_start_time - iter_data_time
 
-            if total_iters % (1024 * 64) == 0:
-                validate()
+            # if total_iters % (1024 * 64) == 0:
+            #     validate()
 
             total_iters += params.BATCH_SIZE
             epoch_iter += params.BATCH_SIZE
@@ -87,7 +88,7 @@ if __name__ == '__main__':
                 # model.save_networks(save_suffix)
 
             iter_data_time = time.time()
-        model.scheduler.step() # update learning rate
+        # model.scheduler.step() # update learning rate
         print("Updating learning rate...")
 
         print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))

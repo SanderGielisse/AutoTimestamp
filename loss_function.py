@@ -12,9 +12,7 @@ def compute_loss(mus, ks, ys):
     assert mus.shape == ks.shape == ys.shape
     return -VonMises(mus, ks).log_prob(ys).mean() # - 1.0738
 
-def compute_loss_regression(mu_x, mu_y, ys):
-    # convert mu to angle
-    mus = torch.atan2(mu_y, mu_x) # angle with (1,0) -> between -pi and pi
+def compute_loss_regression(mus, ys):
     for i in range(mus.shape[0]):
         val = mus[i]
         if val < 0:
@@ -31,14 +29,9 @@ def compute_loss_regression(mu_x, mu_y, ys):
     if (phis < 0).any() or (phis > 2*math.pi).any():
         raise Exception("phis out of bounds ", phis)
 
-    # phis = torch.remainder(phis, math.pi) # this shouldn't happen though
-    distance = 0
-    for phi in phis:
-        # if phi < -math.pi or phi > math.pi:
-        #    raise Exception("Phi out of bounds", phi)
-        # distance += (math.pi * 2) - phi if phi > math.pi else phi
-        # distance += phi % (math.pi * 2) - math.pi
-
+    distances = torch.zeros(phis.shape).cuda()
+    for i in range(phis.shape[0]):
+        phi = phis[i]
         # between 0 and 2pi
         if phi <= math.pi:
             diff = phi
@@ -48,9 +41,9 @@ def compute_loss_regression(mu_x, mu_y, ys):
         if (diff < 0).any() or (diff > math.pi).any():
             raise Exception("diff out of bounds ", phis)
         
-        distance += diff
+        distances[i] = diff
 
-    return distance / mus.shape[0]
+    return distances
     # """
 
 def compute_loss_regression2(mu_x, mu_y, ys):
